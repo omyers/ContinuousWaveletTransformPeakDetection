@@ -17,12 +17,12 @@
  */
 package dulab.adap.datamodel;
 
-import dulab.adap.common.algorithms.Math;
 import java.io.Serializable;
 
 import java.util.NavigableMap;
 import java.util.Map;
 import java.util.TreeMap;
+import dulab.adap.common.algorithms.Math;
 
 /**
  * Class Peak contains all information about a peak as well as
