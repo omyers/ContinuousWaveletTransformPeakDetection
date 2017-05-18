@@ -17,7 +17,6 @@
  */
 package dulab.adap.common.algorithms;
 
-import dulab.adap.datamodel.Peak;
 import dulab.adap.datamodel.PeakInfo;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import org.apache.commons.lang3.ArrayUtils;
+
 
 /**
  *
@@ -231,120 +231,6 @@ public class FeatureTools {
     }
     
     
-    /**
-     * Correct leftPeakIndex and rightPeakIndex of each PeakInfo if necessary
-     * 
-     * @param peaks list of Peak
-     * @param edgeToHeightThreshold threshold for left-to-apex and right-to-apex ratios
-     * @param deltaToHeightThreshold threshold for delta-to-apex ratio
-     */
-    
-    public static void correctPeakBoundaries(List <Peak> peaks,
-            double edgeToHeightThreshold, 
-            double deltaToHeightThreshold)
-    {
-        // Find all unique m/z-values
-        Set <Double> mzValues = new HashSet <> ();
-        for (Peak peak : peaks) mzValues.add(peak.getMZ());
-        
-        List <Peak> sameMZPeaks = new ArrayList <> ();
-        
-        for (double mz : mzValues)
-        {
-            sameMZPeaks.clear();
-        
-            // Find all PeakInfo with the same m/z-value
-            for (Peak peak : peaks)
-                if (peak.getMZ() == mz) sameMZPeaks.add(peak);
-            
-            // Sort those peaks based on their indices
-            Collections.sort(sameMZPeaks, new Comparator <Peak> () {
-                @Override
-                public int compare(Peak peak1, Peak peak2) {
-                    return Double.compare(peak1.getRetTime(), peak2.getRetTime());
-                }
-            });
-            
-            final int size = sameMZPeaks.size();
-            
-            NavigableMap <Double, Double> chromatogram;
-            Entry <Double, Double> firstEntry, lastEntry;
-            double leftToApexRatio, rightToApexRatio, deltaToApexRatio;
-            
-            for (int i = 1; i < size; ++i)
-            {
-                // --------------------------------------------------
-                // Check it the previous PeakInfo can be merged right
-                // --------------------------------------------------
-                
-                Peak prevPeak = sameMZPeaks.get(i - 1);
-                chromatogram = prevPeak.getChromatogram();
-                firstEntry = chromatogram.firstEntry();
-                lastEntry = chromatogram.lastEntry();
-                
-                if (firstEntry == null || lastEntry == null) continue;
-                
-                double prevLeftRetTime = firstEntry.getKey();
-                double prevRightRetTime = lastEntry.getKey();
-                
-                leftToApexRatio = firstEntry.getValue() / prevPeak.getIntensity();
-                rightToApexRatio = lastEntry.getValue() / prevPeak.getIntensity();
-                deltaToApexRatio = java.lang.Math
-                        .abs(firstEntry.getValue() - lastEntry.getValue()) 
-                        / prevPeak.getIntensity();
-                
-                boolean mergeRight = (leftToApexRatio >= edgeToHeightThreshold
-                        || rightToApexRatio >= edgeToHeightThreshold
-                        || deltaToApexRatio >= deltaToHeightThreshold)
-                        && leftToApexRatio < rightToApexRatio;
-                
-                if (!mergeRight) continue;
-                
-                // ------------------------------------------------
-                // Check it the current PeakInfo can be merged left
-                // ------------------------------------------------
-                
-                Peak curPeak = sameMZPeaks.get(i);
-                chromatogram = curPeak.getChromatogram();
-                firstEntry = chromatogram.firstEntry();
-                lastEntry = chromatogram.lastEntry();
-                
-                if (firstEntry == null || lastEntry == null) continue;
-                
-                double curLeftRetTime = firstEntry.getKey();
-                double curRightRetTime = lastEntry.getKey();
-                
-                leftToApexRatio = firstEntry.getValue() / curPeak.getIntensity();
-                rightToApexRatio = lastEntry.getValue() / curPeak.getIntensity();
-                deltaToApexRatio = java.lang.Math
-                        .abs(firstEntry.getValue() - lastEntry.getValue()) 
-                        / curPeak.getIntensity();
-                
-                boolean mergeLeft = (leftToApexRatio >= edgeToHeightThreshold
-                        || rightToApexRatio >= edgeToHeightThreshold
-                        || deltaToApexRatio >= deltaToHeightThreshold)
-                        && leftToApexRatio > rightToApexRatio;
-                
-                if (!mergeLeft) continue;
-                
-                // -----------------------------------------------------------
-                // Merge both PeakInfo if conditions are satisfied
-                // -----------------------------------------------------------
-                
-                double combinedWidth = prevRightRetTime - prevLeftRetTime
-                        + curRightRetTime - curLeftRetTime;
-                double totalWidth = curRightRetTime - prevLeftRetTime;
-                
-                if (totalWidth < 1.1 * combinedWidth)
-                {
-                    prevPeak.getInfo().rightPeakIndex = 
-                            curPeak.getInfo().rightPeakIndex;
-                    curPeak.getInfo().leftPeakIndex = 
-                            prevPeak.getInfo().leftPeakIndex;
-                }
-            }
-        }
-    }
     
     //This returns the angle calculated between the two "means" of the slopes on each side of the peak
     public static double sharpnessAngleAvgSlopes(double[] rt, double[] intensities,int peakLeft,int peakRight){
